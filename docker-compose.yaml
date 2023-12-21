@@ -1,24 +1,24 @@
 version: '3'
 
 services:
-  nodejs_app:
-    image: [dockerhub-repo]:{tag}
+  nodejs_app_{ENV}:
+    image: cantran/labs-devops:{tag}
     build:
       context: nodejs-app/.
       dockerfile: Dockerfile
-    container_name: nodejs_app
+    container_name: nodejs_app_{ENV}
     # depends_on:
     #   - db
     ports:
-      - "3000:3000"
+      - "{API_PORT}:3000"
     environment:
       DB_HOST: db
       # DB_USER: training
       # DB_PASSWORD: training_pw
       # DB_DATABASE: users
     networks:
-      - apps-network
+      - apps-network-{ENV}
 
 networks:
-  apps-network:
-    external: true
+  apps-network-{ENV}:
+    # external: true
