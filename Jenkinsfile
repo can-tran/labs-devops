@@ -3,9 +3,9 @@ pipeline {
    environment {
         ENV = "dev"
         NODE = "Build-server"
-        DOCKER_REGISTRY = $params.DOCKER_REGISTRY
-        DOCKER_REGISTRY_USER = $params.DOCKER_REGISTRY_USER
-        DOCKER_REGISTRY_PASS = $params.DOCKER_REGISTRY_PASS
+        DOCKER_REGISTRY = "$params.DOCKER_REGISTRY"
+        DOCKER_REGISTRY_USER = "$params.DOCKER_REGISTRY_USER"
+        DOCKER_REGISTRY_PASS = "$params.DOCKER_REGISTRY_PASS"
     }
 
    stages {
@@ -23,7 +23,7 @@ pipeline {
             sh "git clone https://github.com/can-tran/labs-devops.git"
 
             sh "cd labs-devops"
-            
+
             sh "docker build nodejs-app/. -t nodejs-app-$ENV:latest --build-arg BUILD_ENV=$ENV -f nodejs-app/Dockerfile"
 
             // sh "cat docker.txt | docker login -u manhhoangseta --password-stdin"
