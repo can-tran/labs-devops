@@ -20,6 +20,10 @@ pipeline {
             TAG = sh(returnStdout: true, script: "git rev-parse -short=10 HEAD | tail -n +2").trim()
         }
          steps {
+            sh "git clone https://github.com/can-tran/labs-devops.git"
+
+            sh "cd labs-devops"
+            
             sh "docker build nodejs-app/. -t nodejs-app-$ENV:latest --build-arg BUILD_ENV=$ENV -f nodejs-app/Dockerfile"
 
             // sh "cat docker.txt | docker login -u manhhoangseta --password-stdin"
