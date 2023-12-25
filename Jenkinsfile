@@ -3,20 +3,19 @@ pipeline {
     parameters {
         choice(name: 'ENV', choices: ['dev', 'prod'], description: 'The environment for the deployment')
         string(name: 'API_PORT', defaultValue: '3000', description: 'the port for the API. The port 3000 for Dev, the port 5000 for the Prod')
-        string(name: 'DOCKER_REGISTRY', defaultValue: '', description: 'The link of docker hub. It is an optional and will be used in the future')
-        string(name: 'DOCKER_REGISTRY_USER', defaultValue: 'cantran', description: 'the account for docker hub')
-        string(name: 'DOCKER_REGISTRY_PASS', defaultValue: '', description: 'the password for docker hub')
+        string(name: 'DOCKER_REGISTRY', defaultValue: 'cantran/labs-devops', description: 'The link of docker hub. It is an optional and will be used in the future')
+        credentials credentialType: 'com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl', defaultValue: 'docker-hub-user-pass', name: 'DOCKER_HUB_CREDENTIAL', required: true
     }
     environment {
         ENV = "$params.ENV"
         API_PORT = "$params.API_PORT"
         NODE = "Build-server"
-        DOCKER_REGISTRY = "$params.DOCKER_REGISTRY"
-        DOCKER_REGISTRY_USER = "$params.DOCKER_REGISTRY_USER"
-        DOCKER_REGISTRY_PASS = "$params.DOCKER_REGISTRY_PASS"
 
         NODEJS_APP = "nodejs-app"
-        DOCKER_HUB_REPO = "cantran/labs-devops"
+        DOCKER_HUB_REPO = "$params.DOCKER_REGISTRY"
+        DOCKER_REGISTRY_CREDENTIAL = credentials('DOCKER_HUB_CREDENTIAL')
+        DOCKER_REGISTRY_USER = "$DOCKER_REGISTRY_CREDENTIAL_USR"
+        DOCKER_REGISTRY_PASS = "$DOCKER_REGISTRY_CREDENTIAL_PSW"
     }
 
     stages {
@@ -32,18 +31,10 @@ pipeline {
             }
             steps {
                 sh "rm -f -r $TAG && mkdir -p $TAG"
-                // sh "cd $TAG"
-                // sh script:'''
-                //     #!/bin/bash
-                //     echo "This is start $(pwd)"
-                //     rm -f -r $TAG && mkdir -p $TAG && cd $TAG
-                //     echo "This is end $(pwd)"
 
-
-                // '''
                 // https://docs.docker.com/engine/reference/commandline/login/#credentials-store
                 sh "echo '$DOCKER_REGISTRY_PASS' | docker login --username $DOCKER_REGISTRY_USER --password-stdin"
-                // customWorkspace "/home/cantv/work/Jenkins/workspaces/server_2/$ENV/"
+
                 dir("$TAG") {
                     sh "git clone https://github.com/can-tran/labs-devops.git"
                     dir("labs-devops/nodejs-app") {
@@ -59,14 +50,6 @@ pipeline {
                         sh "docker rmi -f $DOCKER_HUB_REPO:$ENV-$NODEJS_APP-$TAG"
                     }
                 }
-                // script{
-                //     if (params.DOCKER_REGISTRY.isEmpty()) {
-                //         echo '$DOCKER_REGISTRY_PASS' | docker login --username $DOCKER_REGISTRY_USER --password-stdin
-                //     } else {
-                //         echo '$DOCKER_REGISTRY_PASS' | docker login $DOCKER_REGISTRY --username $DOCKER_REGISTRY_USER --password-stdin
-                //     }
-                // }
-
             }
             
         }
@@ -81,14 +64,10 @@ pipeline {
                 TAG = sh(returnStdout: true, script: "git rev-parse -short=10 HEAD | tail -n +2").trim()
             }
             steps {
-                    // sh "sed -i 's/{tag}/$TAG/g' /home/cantv/work/Jenkins/workspaces/server_3/$ENV/docker-compose.yaml"
-                    // sh "docker compose up -d"
-
                     sh "rm -f -r $TAG && mkdir -p $TAG"
 
                     // https://docs.docker.com/engine/reference/commandline/login/#credentials-store
                     sh "echo '$DOCKER_REGISTRY_PASS' | docker login --username $DOCKER_REGISTRY_USER --password-stdin"
-                    // customWorkspace "/home/cantv/work/Jenkins/workspaces/server_2/$ENV/"
                     dir("$TAG") {
                         sh "git clone https://github.com/can-tran/labs-devops.git"
                         dir("labs-devops") {
