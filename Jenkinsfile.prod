@@ -1,0 +1,83 @@
+pipeline {
+    agent none
+    parameters {
+        string(name: 'API_PORT', defaultValue: '5000', description: 'the port for the API. The port 3000 for Dev, the port 5000 for the Prod')
+        string(name: 'DOCKER_REGISTRY', defaultValue: 'cantran/labs-devops', description: 'The link of docker hub. It is an optional and will be used in the future')
+        credentials credentialType: 'com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl', defaultValue: 'docker-hub-user-pass', name: 'DOCKER_HUB_CREDENTIAL', required: true
+    }
+    environment {
+        ENV = "prod"
+        API_PORT = "$params.API_PORT"
+        NODE = "Build-server"
+
+        NODEJS_APP = "nodejs-app"
+        DOCKER_HUB_REPO = "$params.DOCKER_REGISTRY"
+        DOCKER_REGISTRY_CREDENTIAL = credentials('DOCKER_HUB_CREDENTIAL')
+        DOCKER_REGISTRY_USER = "$DOCKER_REGISTRY_CREDENTIAL_USR"
+        DOCKER_REGISTRY_PASS = "$DOCKER_REGISTRY_CREDENTIAL_PSW"
+    }
+
+    stages {
+        stage('Build Image') {
+            agent {
+                node {
+                    label "Build-server"
+                    customWorkspace "/home/cantv/work/Jenkins/workspaces/server_2/$ENV/"
+                    }
+                }
+            environment {
+                TAG = sh(returnStdout: true, script: "git rev-parse -short=10 HEAD | tail -n +2").trim()
+            }
+            steps {
+                sh "rm -f -r $TAG && mkdir -p $TAG"
+
+                // https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+                sh "echo '$DOCKER_REGISTRY_PASS' | docker login --username $DOCKER_REGISTRY_USER --password-stdin"
+
+                dir("$TAG") {
+                    sh "git clone https://github.com/can-tran/labs-devops.git"
+                    dir("labs-devops/nodejs-app") {
+                        sh "docker build . -t nodejs-app-$ENV:latest --build-arg BUILD_ENV=$ENV -f Dockerfile"
+
+                        // tag docker image
+                        sh "docker tag nodejs-app-$ENV:latest $DOCKER_HUB_REPO:$ENV-$NODEJS_APP-$TAG"
+
+                        //push docker image to docker hub
+                        sh "docker push $DOCKER_HUB_REPO:$ENV-$NODEJS_APP-$TAG"
+
+                        // remove docker image to reduce space on build server
+                        sh "docker rmi -f $DOCKER_HUB_REPO:$ENV-$NODEJS_APP-$TAG"
+                    }
+                }
+            }
+            
+        }
+        stage ("Deploy") {
+            agent {
+            node {
+                label "Target-Server-$ENV"
+                    customWorkspace "/home/cantv/work/Jenkins/workspaces/server_3/$ENV/"
+                }
+            }
+            environment {
+                TAG = sh(returnStdout: true, script: "git rev-parse -short=10 HEAD | tail -n +2").trim()
+            }
+            steps {
+                    sh "rm -f -r $TAG && mkdir -p $TAG"
+
+                    // https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+                    sh "echo '$DOCKER_REGISTRY_PASS' | docker login --username $DOCKER_REGISTRY_USER --password-stdin"
+                    dir("$TAG") {
+                        sh "git clone https://github.com/can-tran/labs-devops.git"
+                        dir("labs-devops") {
+                            sh "sed -i 's/{tag}/$ENV-$NODEJS_APP-$TAG/g' docker-compose.yaml"
+                            sh "sed -i 's/{ENV}/$ENV/g' docker-compose.yaml"
+                            sh "sed -i 's/{API_PORT}/$API_PORT/g' docker-compose.yaml"
+                            sh "cat docker-compose.yaml"
+                            sh "docker compose up -d"
+                        }
+                    }
+                }
+        }
+    }
+}
