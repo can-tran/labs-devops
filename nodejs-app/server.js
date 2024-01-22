@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 var express = require("express");
+var uuid = require("uuid");
 // var os = require("os");
 var app = express();
 var port = 3000;
@@ -9,5 +10,5 @@ console.log(`Server running on port ${port}`);
 });
 
 app.get("/", (req, res, next) => {
-    res.send(`Welcome to nodejs app service! (ENV: ${process.env.ENV})`)
+    res.send(`Welcome to nodejs app service! (ENV: ${process.env.ENV}) - ${uuid.v4()}`)
 });
