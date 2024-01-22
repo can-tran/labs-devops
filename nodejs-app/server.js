@@ -4,7 +4,7 @@ var express = require("express");
 var uuid = require("uuid");
 // var os = require("os");
 var app = express();
-var port = 3000;
+var port = process.env.API_PORT || 3000;
 const instanceId = uuid.v4();
 app.listen(port, () => {
 console.log(`Server running on port ${port} - instance: ${instanceId}`);

@@ -55,8 +55,8 @@ pipeline {
         stage ("Deploy") {
             agent {
             node {
-                label "Target-Server-$ENV"
-                    customWorkspace "/home/cantv/work/Jenkins/workspaces/server_3/$ENV/"
+                label "Build-server"
+                customWorkspace "/home/cantv/work/Jenkins/workspaces/server_3/$ENV/"
                 }
             }
             environment {
@@ -69,12 +69,12 @@ pipeline {
                     sh "echo '$DOCKER_REGISTRY_PASS' | docker login --username $DOCKER_REGISTRY_USER --password-stdin"
                     dir("$TAG") {
                         sh "git clone https://github.com/can-tran/labs-devops.git"
-                        dir("labs-devops") {
-                            sh "sed -i 's/{tag}/$ENV-$NODEJS_APP-$TAG/g' docker-compose.yaml"
-                            sh "sed -i 's/{ENV}/$ENV/g' docker-compose.yaml"
-                            sh "sed -i 's/{API_PORT}/$API_PORT/g' docker-compose.yaml"
-                            sh "cat docker-compose.yaml"
-                            sh "docker compose up -d"
+                        dir("labs-devops/nodejs-app") {
+                            sh "sed -i 's/{tag}/$ENV-$NODEJS_APP-$TAG/g' deployment.yaml"
+                            sh "sed -i 's/{ENV}/$ENV/g' deployment.yaml"
+                            sh "sed -i 's/{API_PORT}/$API_PORT/g' deployment.yaml"
+                            sh "kubectl delete -f deployment.yaml"
+                            sh "kubectl apply -f deployment.yaml"
                         }
                     }
                 }
